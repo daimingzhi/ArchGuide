@@ -739,5 +739,9 @@ public class ConversionServiceFactoryBean implements FactoryBean<ConversionServi
 1. PropertyEditor，这是Spring最初提供的方案，扩展了java中的PropertyEditor（java原先提供这个接口的目的更多是为了进行图形化编程）
 2. ConversionService，Spring后来提供的一个进行类型转换的体系，用来取代PropertyEditor，因为PropertyEditor有很大的局限性，只能进行String->Object的转换。
 
+画图如下：
+
+![](./image/2020032502.png)
+
 
 
