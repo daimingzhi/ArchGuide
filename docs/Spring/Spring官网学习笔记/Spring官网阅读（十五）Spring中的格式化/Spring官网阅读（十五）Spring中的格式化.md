@@ -426,5 +426,11 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 }
 ```
 
+# 总结
+
+Spring中的格式化到此就结束了，总结画图如下：
+
+![](./image/2020032604.png)
+
 
 
