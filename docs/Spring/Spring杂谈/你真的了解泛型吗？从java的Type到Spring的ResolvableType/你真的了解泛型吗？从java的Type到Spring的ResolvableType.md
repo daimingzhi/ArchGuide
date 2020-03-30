@@ -8,15 +8,17 @@
 
 Type是Java 编程语言中所有类型的公共高级接口（官方解释），也就是Java中所有类型的“爹”；其中，“所有类型”的描述尤为值得关注。它并不是我们平常工作中经常使用的 int、String、List、Map等数据类型，而是从Java语言角度来说，对基本类型、引用类型向上的抽象；
 
-Type体系中类型的包括：原始类型(Class)、参数化类型(ParameterizedType)、数组类型(GenericArrayType)、类型变量(TypeVariable)、基本类型(Class);
+Type体系中类型的包括：Class类型(原始类型，基本类型)、参数化类型(ParameterizedType)、数组类型(GenericArrayType)、类型变量(TypeVariable);
 
 原始类型，不仅仅包含我们平常所指的类，还包括枚举、数组、注解等；
 
-参数化类型，就是我们平常所用到的泛型List<String>、Map<String,Integer>这种；
-
-数组类型，并不是我们工作中所使用的数组String[] 、byte[]，而是带有泛型的数组，即T[] ；
-
 基本类型，也就是我们所说的java的基本类型，即int,float,double等
+
+参数化类型，就是我们平常所用到的泛型`List<String>`、`Map<String,Integer>`这种；
+
+类型变量，就是我们在定义泛型时使用到的T,U,K这些，例如`Person<T extends Human>`，这里的T就是类型变量
+
+数组类型，并不是我们工作中所使用的数组String[] 、byte[]，而是参数化类型或者类型变量的数据，即T[] ，或者`List<String>[]`;
 
 **Type体系的出现主要是为了解决泛型的一系列问题。**
 
@@ -43,7 +45,7 @@ public interface Type {
 
 ##### 简介
 
-参数化类型，也就是我们所说的泛型。像List<String>就是一个参数化类型，但是List并不是，因为没有使用泛型。
+参数化类型，也就是我们所说的泛型。像`List<String>`就是一个参数化类型，但是List并不是，因为没有使用泛型。
 
 ##### 接口定义
 
@@ -574,11 +576,11 @@ private ResolvableType(Type type, @Nullable TypeProvider typeProvider,
 
 Spring中经常会用到一个方法，`ResolvableType.forRawClass(type)`，我们就先看下这一系列的三个方法
 
-1. ResolvableType.forRawClass(type)
-2. ResolvableType forClass(@Nullable Class<?> clazz)
-3. ResolvableType forClass(Class<?> baseType, Class<?> implementationClass)
-4. ResolvableType forClassWithGenerics(Class<?> clazz, Class<?>... generics)
-5. ResolvableType forClassWithGenerics(Class<?> clazz, ResolvableType... generics) 
+1. `ResolvableType.forRawClass(type)`
+2. `ResolvableType forClass(@Nullable Class<?> clazz)`
+3. `ResolvableType forClass(Class<?> baseType, Class<?> implementationClass)`
+4. `ResolvableType forClassWithGenerics(Class<?> clazz, Class<?>... generics)`
+5. `ResolvableType forClassWithGenerics(Class<?> clazz, ResolvableType... generics) `
 
 #### forRawClass(Class<?> clazz) 
 
@@ -922,6 +924,8 @@ private static class TypeProxyInvocationHandler implements InvocationHandler, Se
 # 总结
 
 在这篇文章中我们主要学习了java的Type机制，如下：
+
+![官网实例化](image/2020031704.png)
 
 
 
