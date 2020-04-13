@@ -33,7 +33,7 @@ Spring官网阅读（十八）Spring中AOP
 
 > 前置场景，假设我们现在要对所有的controller层的接口进行性能监控
 
-## 切面
+##  切面
 
 > 切点跟通知组成了切面
 
@@ -341,7 +341,7 @@ public class DmzAnnotationAspect {
 ```java
 @Aspect
 @Component
-public class DmzAnnotationAspect {
+public class DmzAspect {
 	
     // 申明的切点
     @Pointcut("execution(public * *(..))")
@@ -384,29 +384,266 @@ public class DmzAnnotationAspect {
 
 ```
 
-
-
 #### 通知中的参数
+
+>  在上面应用的例子中，只有在**环绕通知**的方法上我添加了一个`ProceedingJoinPoint`类型的参数。这个`ProceedingJoinPoint`意味着当前执行中的方法，它继承了`JoinPoint`接口。
+
+##### JoinPoint
+
+JoinPoint可以在任意的通知方法上作为**第一个参数**申明，代表的时候通知所应用的切点（也就是目标类中的方法），它提供了以下几个方法：
+
+- `getArgs()`: 返回当前的切点的参数
+- `getThis()`: 返回代理对象
+- `getTarget()`: 返回目标对象
+- `getSignature()`: 返回这个目标类中方法的描述信息，比如修饰符，名称等
+
+##### ProceedingJoinPoint
+
+ProceedingJoinPoint在JoinPoint的基础上多提供了两个方法
+
+- proceed()：直接执行当前的方法，基于此，我们可以在方法的执行前后直接加入对应的业务逻辑
+- proceed(Object[] args)：可以改变当前执行方法的参数，然后用改变后的参数执行这个方法
 
 #### 通知的排序
 
+当我们对于一个切点定义了多个通知时，例如，在一个切点上同时定义了两个before类型的通知。这个时候，为了让这两个通知按照我们期待的顺序执行，我们需要在切面上添加`org.springframework.core.annotation.Order`注解或者让切面实现`org.springframework.core.Ordered`接口。如下：
 
+```java
+@Aspect
+@Component
+@Order(-1)
+public class DmzFirstAspect {
+    // ...
+}
 
-
+@Aspect
+@Component
+@Order(0)
+public class DmzSecondAspect {
+    // ...
+}
+```
 
 # AOP的应用
 
+AOP的实际应用非常多，我这里就给出两个例子
 
+1. 全局异常处理器
+2. 利用AOP打印接口日志
 
 ## 全局异常处理器
 
+>  需要用到两个注解：`@RestControllerAdvice及`@ExceptionHandler`,总共分为以下几步：
+>
+> 1. 定义自己项目中用到的错误码及对应异常信息
+> 2. 封装自己的异常
+> 3. 申明全局异常处理器并针对业务中的异常做统一处理
 
+### 定义错误码及对应异常信息
+
+```java
+@AllArgsConstructor
+@Getter
+public enum ErrorCode {
+
+    INTERNAL_SERVICE_ERROR(500100, "服务端异常"),
+
+    PASSWORD_CAN_NOT_BE_NULL(500211, "登录密码不能为空"),
+
+    PASSWORD_ERROR(500215, "密码错误");
+    
+    private int code;
+
+    private String msg;
+}
+
+// 统一返回的参数
+@Data
+public class Result<T> {
+    private int code;
+    private String msg;
+    private T data;
+    
+    
+    public static <T> Result<T> success(T data){
+        return new Result<T>(data);
+    }
+    
+    public static <T> Result<T> error(ErrorCode cm){
+        return new Result<T>(cm.getMsg);
+    }
+}
+```
+
+### 封装对应异常
+
+```java
+public class GlobalException extends RuntimeException {
+    
+    private static final long serialVersionUID = 1L;
+    
+    private int errorCode;
+    
+    public CreativeArtsShowException(int errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    public CreativeArtsShowException(ErrorCode errorCode) {
+        super(errorCode.getMsg());
+        this.errorCode =  errorCode.getCode();
+    }
+}
+```
+
+### 申明异常处理器
+
+```java
+//该注解定义全局异常处理类
+//@ControllerAdvice
+//@ResponseBody
+// 使用@RestControllerAdvice可以替代上面两个注解
+@RestControllerAdvice
+//@ControllerAdvice(basePackages ="com.example.demo.controller") 可指定包
+public class GlobalExceptionHandler {
+    @ExceptionHandler(value=GlobalException.class) //该注解声明异常处理方法
+    public Result<String> exceptionHandler(HttpServletRequest request, Exception e){
+        e.printStackTrace();
+        // 在这里针对异常做自己的处理
+    }
+}
+```
+
+其实SpringMVC中提供了一个异常处理的基类（`org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler`）。我们只需要将自定义的异常处理类继承这个`ResponseEntityExceptionHandler`然后复写对应的方法即可完成全局异常处理。这个类中的方法很简单，所以这里就不放代码了。
+
+这个类中已经定义了很多的异常处理方法，如下：
+
+```java
+@ExceptionHandler({
+			HttpRequestMethodNotSupportedException.class,
+			HttpMediaTypeNotSupportedException.class,
+			HttpMediaTypeNotAcceptableException.class,
+			MissingPathVariableException.class,
+			MissingServletRequestParameterException.class,
+			ServletRequestBindingException.class,
+			ConversionNotSupportedException.class,
+			TypeMismatchException.class,
+			HttpMessageNotReadableException.class,
+			HttpMessageNotWritableException.class,
+			MethodArgumentNotValidException.class,
+			MissingServletRequestPartException.class,
+			BindException.class,
+			NoHandlerFoundException.class,
+			AsyncRequestTimeoutException.class
+		})
+```
+
+所以我们只需要复写对应异常处理的方法即可完成自己在当前业务场景下异常的处理。但是需要注意的是，它只会对上面这些框架抛出的异常进行处理，对于我们自定义的异常还是会直接抛出，所以我们自定义的异常处理还是需要在其中进行定义。
 
 ## 接口日志
 
+我们在开发中经常会打印日志，特别是接口的入参日志，如下：
 
+```java
+@RestController
+@RequestMapping("/test/simple")
+@Validated
+@Slf4j
+public class ValidationController {
 
+    @GetMapping("/valid")
+    public String testValid(
+            @Max(10) int age, @Valid @NotBlank String name) {
+        log.info("接口入参：" + age + "      " + name);
+        return "OK";
+    }
+}
+```
 
+如果每一个接口都需要添加这样一句代码的话就显得太LOW了，基于此我们可以使用AOP来简化代码，按照以下几步即可：
 
+1. 自定义一个注解
+2. 申明切面
 
+### 定义一个注解
 
+```java
+@Target({ElementType.TYPE,ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+public @interface Log {
+
+}
+```
+
+### 申明切面
+
+```java
+@Aspect
+@Component
+@Slf4j
+public class LogAspect {
+    @Pointcut("@annotation(com.spring.study.springfx.aop.annotation.Log)")
+    private void pointcut() {
+    }
+
+    @Before("pointcut()")
+    public void before(JoinPoint joinPoint) {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        Parameter[] parameters = method.getParameters();
+        Object[] args = joinPoint.getArgs();
+        String methodName = method.getName();
+        Class<?> declaringClass = method.getDeclaringClass();
+        String simpleName = declaringClass.getSimpleName();
+        StringBuilder sb = new StringBuilder();
+        sb.append(simpleName).append(".").append(methodName).append(" [");
+        for (int i = 0; i < parameters.length; i++) {
+            String name = parameters[i].getName();
+            sb.append(name);
+            sb.append(":");
+            sb.append(args[i]);
+            sb.append(";");
+        }
+        sb.setLength(sb.length() - 1);
+        sb.append("]");
+        log.info(sb.toString());
+    }
+}
+```
+
+基于上面的例子测试：
+
+```java
+@RestController
+@RequestMapping("/test/simple")
+@Validated
+@Slf4j
+public class ValidationController {
+
+    @Log
+    @GetMapping("/valid")
+    public String testValid(
+            @Max(10) int age, @Valid @NotBlank String name) {
+        log.info("接口入参：" + age + "      " + name);
+        return "OK";
+    }
+}
+
+// 控制台输出日志：
+// ValidationController.testValid [age:0;name:11]
+```
+
+# 总结
+
+这篇文章到这里就结束啦，这也是《Spring官网阅读笔记》系列笔记的最后一篇。其实整个SpringFrameWork可以分为三部分
+
+1. IOC
+2. AOP
+3. 事务（整合JDBC,MyBatis）
+
+而IOC跟AOP又是整个Spring的基石，这一系列的笔记有10篇以上是IOC相关的知识。AOP的只有这一篇，这是因为Spring简化了AOP的使用，如果要探究其原理以及整个AOP的体系的话必定要深入到源码中去，所以思来想去还是决定将其放到源码阅读系列笔记中去。
+
+大家可以关注我接下来的一系列文章哦~
+
+码字不易，点个赞哈！
